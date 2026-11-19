@@ -1,0 +1,5 @@
+/assets/
+*.yaml
+*.yml
+*.tar.gz
+.env*
