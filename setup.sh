@@ -125,22 +125,46 @@ done
 proxy_port_open || die "Mihomo did not open port $port within 10 seconds."
 
 proxy="http://127.0.0.1:$port"
-export http_proxy=$proxy HTTP_PROXY=$proxy https_proxy=$proxy HTTPS_PROXY=$proxy
-export all_proxy=$proxy ALL_PROXY=$proxy
-export no_proxy=localhost,127.0.0.1,::1 NO_PROXY=localhost,127.0.0.1,::1
+with_mihomo() (
+  export http_proxy=$proxy HTTP_PROXY=$proxy https_proxy=$proxy HTTPS_PROXY=$proxy
+  export all_proxy=$proxy ALL_PROXY=$proxy
+  export no_proxy=localhost,127.0.0.1,::1 NO_PROXY=localhost,127.0.0.1,::1
+  "$@"
+)
 export PATH="$HOME/.local/bin:$PATH"
 
 if ! command -v codex >/dev/null 2>&1; then
   command -v curl >/dev/null 2>&1 || die "curl is required to download Codex."
   printf '%s\n' "Downloading the official Codex installer through Mihomo…" >&2
-  curl --fail --silent --show-error --location --connect-timeout 10 --max-time 60 \
-    --retry 2 --retry-max-time 90 --output "$runtime/install-codex.sh" \
-    https://chatgpt.com/codex/install.sh
-  sh "$runtime/install-codex.sh"
+  if with_mihomo curl -q --fail --silent --show-error --location --connect-timeout 10 --max-time 25 \
+    --output "$runtime/install-codex.sh" https://chatgpt.com/codex/install.sh; then
+    with_mihomo sh "$runtime/install-codex.sh" ||
+      printf '%s\n' "The standalone installer failed. Trying GitHub Releases…" >&2
+  fi
+  if ! command -v codex >/dev/null 2>&1; then
+    case "$(uname -m)" in
+      x86_64) target=x86_64-unknown-linux-musl ;;
+      aarch64|arm64) target=aarch64-unknown-linux-musl ;;
+      *) die "GitHub release fallback supports Linux amd64 and arm64." ;;
+    esac
+    asset="codex-$target"
+    url="https://github.com/openai/codex/releases/latest/download/$asset.tar.gz"
+    download=(curl -q --fail --silent --show-error --location --proto '=https' --proto-redir '=https'
+      --connect-timeout 10 --max-time 900 --output "$runtime/codex.tar.gz" "$url")
+    printf '%s\n' "Downloading Codex from OpenAI's GitHub Releases…" >&2
+    "${download[@]}" || with_mihomo "${download[@]}" ||
+      die "Could not download Codex from GitHub Releases over either network path."
+    tar -xOzf "$runtime/codex.tar.gz" "$asset" > "$runtime/codex" ||
+      die "Could not extract Codex from the GitHub release archive."
+    chmod 755 "$runtime/codex"
+    "$runtime/codex" --version >/dev/null || die "The downloaded Codex binary could not run."
+    mkdir -p -- "$HOME/.local/bin"
+    install -m 755 -- "$runtime/codex" "$HOME/.local/bin/codex"
+  fi
 fi
 command -v codex >/dev/null 2>&1 || die "Codex is not on PATH after installation."
 if [[ $mode == install ]]; then
-  codex --version
+  with_mihomo codex --version
 else
-  codex "$@"
+  with_mihomo codex "$@"
 fi

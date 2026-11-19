@@ -51,6 +51,7 @@ bash /tmp/codex-container-bootstrap/setup.sh /run/secrets/clash.yaml
 ## 安装与排查
 
 - 用 `setup.sh --install-only` 安装并显示 Codex 版本。
+- 如果 `chatgpt.com` 的安装器超时或返回 403，脚本会改从 OpenAI 的 GitHub Releases 下载 Linux 二进制，先用容器原有网络，再试 Mihomo。若安装完成后登录或 API 请求仍返回 403，请检查当前代理出口，因为登录和会话是独立的网络请求。 [OpenAI Codex Releases](https://github.com/openai/codex/releases)
 - 用 `setup.sh --check` 下载并检查配置，无需启动代理。也可以在选项后指定本地 YAML。
 - 用 `setup.sh --subscription login --device-auth` 使用设备码登录。
 - 后续仍可用 `setup.sh` 打开 Codex。脚本优先使用 PATH 上已有的 Codex。
