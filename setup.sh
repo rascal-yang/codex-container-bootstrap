@@ -52,7 +52,7 @@ trap 'exit 143' TERM
 
 mihomo="$assets/bin/mihomo"
 yq="$assets/bin/yq"
-[[ -x $mihomo && -x $yq ]] || die "Missing proxy binaries in $assets/bin. Use the bundle or point BOOTSTRAP_ASSETS_DIR at the clash-for-linux runtime directory."
+[[ -x $mihomo && -x $yq ]] || die "Missing proxy binaries in $assets/bin. Run bash $repo_dir/prepare-assets.sh from a GitHub-connected machine, or use the prepared bundle."
 for name in Country.mmdb GeoIP.dat GeoSite.dat GeoLite2-ASN.mmdb geoip.metadb; do
   if [[ -f "$assets/$name" ]]; then
     ln -s -- "$assets/$name" "$runtime/$name"
